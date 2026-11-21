@@ -5,13 +5,9 @@
     exclusive.py off [--plan P]
     exclusive.py status [--plan P]
 
-`on` (also run by `superlite-cli orchestrator set`) writes `.superlite/peers.json` and, on a
-Claude Code project, sets enabledPlugins["superpowers@claude-plugins-official"]
-to false in `.claude/settings.local.json`. Other keys in that file stay. The
-previous value is kept in peers.json. `off` (also run by `superlite-cli finish`) removes
-the marker and restores that value once no other session's run is open
-(the last run to finish releases all), so superpowers and anything like it can be used again. A second `on` does not overwrite the saved value. Unreadable
-settings are left untouched. Stdlib only.
+`on` records a workflow marker without changing host configuration. Select the
+workflow when launching the host. `off` also restores settings changed by a
+legacy release when it finds the old marker. Stdlib only.
 """
 import argparse
 import json
@@ -29,8 +25,8 @@ import state  # noqa: E402
 FILE = "peers.json"
 PEER_ID = "superpowers@claude-plugins-official"  # the installed Claude Code plugin id
 PEER_NAME = "superpowers"
-SUSPENDED = "peers: suspended superpowers until this run finishes"
-CLEAR = "peers: clear (superpowers may be used again)"
+SUSPENDED = "peers: Superlite workflow selected for this run"
+CLEAR = "peers: clear (workflow selection is set at launch)"
 
 
 def peers_path(plan_or_dir=None) -> Path:
@@ -72,19 +68,6 @@ def read_settings(path: Path):  # O(S)
     return d if isinstance(d, dict) else None
 
 
-def current_enabled(plan_or_dir=None):  # O(S)
-    """(skip, previous). skip means the settings file is not ours to rewrite."""
-    if not claude_host(plan_or_dir):
-        return True, None
-    data = read_settings(settings_path(plan_or_dir))
-    if data is None:
-        return True, None
-    plugins = data.get("enabledPlugins")
-    if not isinstance(plugins, dict) or PEER_ID not in plugins:
-        return False, None
-    return False, bool(plugins[PEER_ID])
-
-
 def write_enabled(plan_or_dir, value) -> None:  # O(S)
     """Set the peer plugin flag. None removes the key. No-op when the file is not writable JSON."""
     if not claude_host(plan_or_dir):
@@ -112,17 +95,14 @@ def write_enabled(plan_or_dir, value) -> None:  # O(S)
 
 
 def suspend(plan_or_dir=None) -> str:  # O(S)
-    """Mark peer plugins suspended. A second call keeps the saved previous flag."""
+    """Mark the run as exclusive. Preserve any legacy record for finish."""
     d = orchestrator.sl_dir(plan_or_dir)
 
     def mark(cur):
         if cur.get("suspended") is True:
             return cur
-        skip, previous = current_enabled(plan_or_dir)
-        if not skip:
-            write_enabled(plan_or_dir, False)
         return {"suspended": True, "peers": [PEER_NAME], "since": datetime.now().isoformat(timespec="seconds"),
-                "claude_plugin": PEER_ID, "settings_skip": skip, "previous_enabled": previous}
+                "settings_skip": True}
     base.locked_update(d / FILE, mark)
     return SUSPENDED
 
@@ -144,7 +124,8 @@ def other_open_runs(plan_or_dir=None) -> list:  # O(N)
 def _release_here(sl: Path) -> None:  # O(S)
     """Restore the saved flag and drop the marker for the checkout whose run folder is sl."""
     def clear(cur):
-        if cur.get("suspended") is True and not cur.get("settings_skip"):
+        if (cur.get("suspended") is True and cur.get("claude_plugin") == PEER_ID
+                and cur.get("settings_skip") is False):
             write_enabled(sl, cur.get("previous_enabled"))  # None deletes the key
         return {}
     base.locked_update(sl / FILE, clear)

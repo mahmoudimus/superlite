@@ -183,11 +183,13 @@ root="${root//\\//}"
 
 # up_to_run DIR: the nearest folder at or above DIR that holds .superlite/orchestrator.json, else DIR, into UP.
 # The search stops at the main checkout (a folder with a .git directory): a linked worktree (.git file) still
-# finds its hub's run, but a run outside the repository never gates it.
+# finds its hub's run unless the host reply bridge opts into checkout-only routing.
 up_to_run() {
   local d="$1" up
   while [ ! -f "$d/.superlite/orchestrator.json" ]; do
-    [ -d "$d/.git" ] && { UP="$1"; return 0; }
+    if [ -d "$d/.git" ] || { [ "${reply_checkout_only:-0}" = 1 ] && [ -f "$d/.git" ]; }; then
+      UP="$1"; return 0
+    fi
     up="${d%/*}"; { [ -z "$up" ] || [ "$up" = "$d" ]; } && { UP="$1"; return 0; }; d="$up"
   done
   UP="$d"

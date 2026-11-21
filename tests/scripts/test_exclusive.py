@@ -1,4 +1,4 @@
-"""Peer plugins are suspended for a superlite run and restored when it finishes."""
+"""Workflow markers and compatibility with settings changed by upstream."""
 from __future__ import annotations
 
 import json
@@ -19,41 +19,24 @@ BASH = _GIT_BASH if os.name == "nt" and os.path.exists(_GIT_BASH) else shutil.wh
 PEER = "superpowers@claude-plugins-official"
 
 
-def test_orchestrator_set_suspends_and_finish_restores(tmp_path, monkeypatch):
+def test_finish_restores_upstream_settings_marker(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(ROOT))
-    other = {"enabledPlugins": {PEER: True, "other@market": True}, "theme": "dark"}
     settings = tmp_path / ".claude" / "settings.local.json"
     settings.parent.mkdir()
-    settings.write_text(json.dumps(other) + "\n", encoding="utf-8")
-    cp = run(ORCH, "set", "ai", "--plan", tmp_path / "plan.md", cwd=tmp_path)
-    assert cp.returncode == 0 and "peers: suspended superpowers" in cp.out
-    saved = json.loads((tmp_path / ".superlite" / "peers.json").read_text(encoding="utf-8"))
-    assert saved["suspended"] is True and saved["previous_enabled"] is True
-    turned = json.loads(settings.read_text(encoding="utf-8"))
-    assert turned["enabledPlugins"][PEER] is False and turned["enabledPlugins"]["other@market"] is True
-    assert turned["theme"] == "dark"
-    # a second set must not record the false we just wrote as the value to restore
-    run(ORCH, "set", "human", "--plan", tmp_path / "plan.md", cwd=tmp_path)
-    again = json.loads((tmp_path / ".superlite" / "peers.json").read_text(encoding="utf-8"))
-    assert again["since"] == saved["since"] and again["previous_enabled"] is True
+    settings.write_text(json.dumps({"enabledPlugins": {PEER: False, "other@market": True}, "theme": "dark"}))
     sl = tmp_path / ".superlite"
+    sl.mkdir()
+    marker = sl / "peers.json"
+    legacy = {"suspended": True, "claude_plugin": PEER, "settings_skip": False, "previous_enabled": True}
+    marker.write_text(json.dumps(legacy))
+    assert run(ORCH, "set", "human", cwd=tmp_path).returncode == 0
+    assert json.loads(marker.read_text()) == legacy
     (sl / "progress.md").write_text("# Progress ledger\n", encoding="utf-8")
     done = run(SCRIPTS / "finish.py", "--ledger", sl / "progress.md", "--log", sl / "i.jsonl", cwd=tmp_path)
     assert "peers: clear" in done.out
-    assert not (sl / "peers.json").is_file()
+    assert not marker.is_file()
     restored = json.loads(settings.read_text(encoding="utf-8"))
-    assert restored["enabledPlugins"][PEER] is True and restored["theme"] == "dark"
-
-
-def test_release_removes_a_flag_superlite_added(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLAUDE_CODE", "1")
-    monkeypatch.delenv("CLAUDE_PLUGIN_ROOT", raising=False)
-    run(EX, "on", cwd=tmp_path)
-    settings = tmp_path / ".claude" / "settings.local.json"
-    assert json.loads(settings.read_text(encoding="utf-8"))["enabledPlugins"][PEER] is False
-    run(EX, "off", cwd=tmp_path)
-    assert not settings.is_file()
-    assert "clear" in run(EX, "status", cwd=tmp_path).out
+    assert restored == {"enabledPlugins": {PEER: True, "other@market": True}, "theme": "dark"}
 
 
 def test_unreadable_settings_are_left_alone(tmp_path, monkeypatch):
@@ -73,13 +56,13 @@ def test_session_start_mentions_the_suspension_only_while_it_holds(tmp_path):
     (tmp_path / "home").mkdir()
     quiet = subprocess.run([BASH, str(HOOK)], cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", env=env)
     assert quiet.returncode == 0
-    assert "Peer process plugins" not in json.loads(quiet.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "Use only Superlite lifecycle skills" not in json.loads(quiet.stdout)["hookSpecificOutput"]["additionalContext"]
     sl = tmp_path / ".superlite"
     sl.mkdir()
     (sl / "peers.json").write_text(json.dumps({"suspended": True, "peers": ["superpowers"]}) + "\n", encoding="utf-8")
     loud = subprocess.run([BASH, str(HOOK)], cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", env=env)
     ctx = json.loads(loud.stdout)["hookSpecificOutput"]["additionalContext"]
-    assert "superpowers" in ctx and "can be used again" in ctx
+    assert "Use only Superlite lifecycle skills" in ctx
 
 
 def test_peers_released_after_last_run(tmp_path, monkeypatch):
@@ -100,12 +83,12 @@ def test_peers_released_after_last_run(tmp_path, monkeypatch):
     wt = repo / ".claude" / "worktrees" / "sessions-b"
     run(EX, "on", cwd=repo)
     settings = repo / ".claude" / "settings.local.json"
-    assert json.loads(settings.read_text(encoding="utf-8"))["enabledPlugins"][PEER] is False
+    assert not settings.exists()
     # the run in the main checkout finishes while b is still open: peers stay off
     held = run(EX, "off", cwd=repo)
-    assert "suspended" in held.out and "b" in held.out
+    assert "workflow selected" in held.out and "b" in held.out
     assert (repo / ".superlite" / "peers.json").is_file()
-    assert json.loads(settings.read_text(encoding="utf-8"))["enabledPlugins"][PEER] is False
+    assert not settings.exists()
     # b finishes last: peers are released
     sys.path.insert(0, str(SCRIPTS))
     import session as session_mod

@@ -62,6 +62,14 @@ BRANCH=$(git branch --show-current)
 - `GIT_DIR != GIT_COMMON` means you are in a linked worktree.
 - Empty `BRANCH` means detached HEAD (cannot branch, push or open a PR from the sandbox).
 
+## Git permissions
+
+`superlite-cli session` and `checkpoint` can write Git metadata. If the host
+denies one of these operations, request permission for the specific command
+through Codex before retrying. Use the selected chat's checkout for review
+and approvals. When Superlite redirects to another worktree, start a fresh
+Superlite chat in that worktree before presenting the review plan.
+
 ## Codex App finishing
 
 When the sandbox blocks branch or push operations (detached HEAD in an externally managed worktree), commit all work and tell the user to use the App's native controls: **Create branch** (names the branch, then commit/push/PR via the App UI) or **Hand off to local** (moves the work to the local checkout). You can still run tests and output suggested branch names, commit messages and PR descriptions.

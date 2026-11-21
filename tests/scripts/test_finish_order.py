@@ -1,13 +1,11 @@
-"""finish marks the run finished before it releases the suspended peers."""
+"""Finish marks the run finished before it clears the workflow marker."""
 from __future__ import annotations
 
-import json
 import subprocess
 
 from test_plan_tools import SCRIPTS, run
 
 EX = SCRIPTS / "exclusive.py"
-PEER = "superpowers@claude-plugins-official"
 
 
 def test_last_finish_releases_peers(tmp_path, monkeypatch):
@@ -28,14 +26,14 @@ def test_last_finish_releases_peers(tmp_path, monkeypatch):
     wt = repo / ".claude" / "worktrees" / "sessions-b"
     run(EX, "on", cwd=repo)
     settings = repo / ".claude" / "settings.local.json"
-    assert json.loads(settings.read_text(encoding="utf-8"))["enabledPlugins"][PEER] is False
+    assert not settings.is_file()
     outs = []
     for cwd in (wt, repo):
         sl = cwd / ".superlite"
         sl.mkdir(exist_ok=True)
         (sl / "progress.md").write_text("# Progress ledger\n", encoding="utf-8")
         outs.append(run(SCRIPTS / "finish.py", "--ledger", sl / "progress.md", "--log", sl / "i.jsonl", cwd=cwd).out)
-    assert "finished" in outs[0] and "suspended" in outs[0]
+    assert "finished" in outs[0] and "workflow selected" in outs[0]
     assert "finished" in outs[1] and "clear" in outs[1]
     assert outs[1].index("session:") < outs[1].index("peers:")
     assert not (repo / ".superlite" / "peers.json").is_file()

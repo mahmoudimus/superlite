@@ -129,7 +129,7 @@ if [ -n "$hud_line" ] && [ "$hud_off" != "1" ]; then
 '"${hud_line}"
 fi
 
-# A superlite run suspends peer process plugins. The marker is removed by superlite-cli finish.
+# A Superlite run expects its host session to select one workflow.
 peers_file=".superlite/peers.json"
 if [ -f "$peers_file" ]; then
   IFS= read -r -d '' peers_body < "$peers_file" || true
@@ -137,7 +137,7 @@ if [ -f "$peers_file" ]; then
   if [[ $peers_body =~ $re_susp ]]; then
     content="${content}"$'
 
-'"Peer process plugins are suspended for this superlite run: superpowers, and anything else that carries the same lifecycle skills. Do not load their skills. When this run finishes they can be used again."
+'"Use only Superlite lifecycle skills for this run. Start a fresh session to switch workflows."
   fi
 fi
 

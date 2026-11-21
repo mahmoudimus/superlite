@@ -167,14 +167,13 @@ def test_pr14_slug_cannot_walk_out_of_the_session_store(repo):
 
 # ---- PR 7 ------------------------------------------------------------------------------------------------------
 
-def test_pr7_exclusive_settings_write_does_not_block_checkpoints(repo):
-    """Finding 119: on a Claude Code project `orchestrator set` writes .claude/settings.local.json; the run's
-    checkpoints must still pass with that file present (it is bookkeeping, not an out-of-scope change)."""
+def test_pr7_local_settings_do_not_block_checkpoints(repo):
+    """Finding 119: local settings are bookkeeping and must not block checkpoints."""
     assert repo.cli("session", "ensure", "--slug", "run").code == 0
     (repo.root / ".claude").mkdir()
     assert repo.cli("orchestrator", "set", "ai", env={"CLAUDE_CODE": "1"}).code == 0
     settings = repo.root / ".claude" / "settings.local.json"
-    assert settings.is_file()  # the suspension did write the file
+    settings.write_text('{"theme":"dark"}\n', encoding="utf-8")
     plan = repo.write("docs/plans/2026-11-01-flow.md", FLOW_PLAN.read_text(encoding="utf-8"))
     assert repo.cli("plan_tools", "lint", "--plan", plan, "--stable").code == 0
     assert repo.cli("dispatch", "--plan", plan).code == 0

@@ -7,7 +7,7 @@
     "url": "https://github.com/iha2"
   },
   "homepage": "https://github.com/iha2/superlite",
-  "repository": "https://github.com/iha2/superlite",
+  "repository": "https://github.com/mahmoudimus/superlite",
   "license": "MIT",
   "keywords": [
     "inventing",
@@ -19,7 +19,7 @@
     "workflow"
   ],
   "skills": "./skills/",
-  "hooks": {},
+  "hooks": "./hooks/hooks-codex.json",
   "interface": {
     "displayName": "Superlite",
     "shortDescription": "Lean planning, TDD, debugging, and delivery workflows for coding agents",

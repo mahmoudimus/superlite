@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,26 +15,26 @@ const agentsDir = resolve(packageRoot, "agents");
 let cachedBootstrap: string | null | undefined;
 
 export default function superlitePiExtension(pi: ExtensionAPI) {
-	let injectBootstrap = true;
-
 	pi.on("resources_discover", async () => ({
 		skillPaths: [skillsDir],
 	}));
 
-	pi.on("session_start", async () => {
-		injectBootstrap = true;
+	pi.on("input", async (event, ctx) => {
+		if (event.source !== "interactive" && event.source !== "rpc") return;
+		await new Promise<void>((done) => {
+			const child = spawn("bash", [resolve(packageRoot, "hooks/record-reply")], {
+				cwd: ctx.cwd,
+				stdio: ["pipe", "ignore", "ignore"],
+			});
+			child.once("error", () => done());
+			child.once("close", () => done());
+			child.stdin.on("error", () => {});
+			child.stdin.end(JSON.stringify({ cwd: ctx.cwd, prompt: event.text }));
+		});
 	});
 
-	pi.on("session_compact", async () => {
-		injectBootstrap = true;
-	});
-
-	pi.on("agent_end", async () => {
-		injectBootstrap = false;
-	});
-
+	// Pi transforms a copy for each model call. Keep the prefix stable across turns.
 	pi.on("context", async (event) => {
-		if (!injectBootstrap) return;
 		if (event.messages.some(messageContainsBootstrap)) return;
 
 		const bootstrap = getBootstrapContent();
@@ -83,6 +84,8 @@ function stripFrontmatter(content: string): string {
 
 function piToolMapping(): string {
 	return `## Pi tool mapping
+
+For \`/superlite:start\` or another Superlite command, read the matching Markdown file in ${resolve(packageRoot, "commands")} and follow it with the current request as its arguments. For a human approval, end the turn and have the user send their approval as a normal chat message. A tool answer does not pass through the input hook. If Superlite redirects the run to another worktree, start a fresh Superlite session there before writing a review plan. Shell cd does not move this chat.
 
 Pi has native skills but does not expose Claude Code's \`Skill\` tool. When a Superlite instruction says to invoke a skill, use Pi's native skill system instead: load the relevant \`SKILL.md\` with \`read\` when the skill applies, or let a human invoke \`/skill:name\` explicitly.
 

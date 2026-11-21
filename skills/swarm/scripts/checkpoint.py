@@ -63,7 +63,7 @@ LEDGER_LINE = re.compile(r"^\s*[-*+]?\s*checkpoint\s+(T\d+[A-Za-z]?)\s+([0-9a-f]
 STATE = f"{state.DIR_NAME}/checkpoints.json"
 TEMP_INDEX = f"{state.DIR_NAME}/checkpoint.index"
 REF_ROOT = "refs/superlite"
-SETTINGS_LOCAL = ".claude/settings.local.json"  # written by exclusive.py (peer suspension); no task owns it
+SETTINGS_LOCAL = ".claude/settings.local.json"  # host-local settings; no task owns it
 WORKTREE_HOME = ".claude/worktrees/"  # linked checkouts (superlite's and the Claude Code harness's): never this tree's changes
 TASK_ID = re.compile(r"T\d+[A-Za-z]?")
 

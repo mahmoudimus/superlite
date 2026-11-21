@@ -23,6 +23,8 @@
 
 ## Use it
 
+Use the [Superlite session setup](docs/workflow-selection.md) for Claude Code, Codex, or Pi alongside Superpowers.
+
 Install it ([below](#install)), open a session in your project, and say what you want. superlite shows a one-screen intro the first time; `/superlite:intro` brings it back and `/superlite:help` has every detail.
 
 Each run starts its own session automatically (`superlite-cli session ensure`): a branch `superlite/sessions/<topic>` in your checkout, or a parallel worktree if another run is still open. Shipping closes it. See [Sessions](docs/sessions.md).
@@ -96,18 +98,7 @@ A read-only view, offered when you approve the plan (reply `approve map`), or op
 
 ## Install
 
-You need Claude Code, git, Python 3.12 or newer (the tools are Python; the project you build can be in any language), and `bash` (Git Bash on Windows). `uv` is optional.
-
-```
-/plugin marketplace add iha2/superlite
-/plugin install superlite@superlite-dev
-```
-
-Optional, for the agent map pane in Claude Desktop: `/plugin install claude-agent-map@superlite-dev`. Superlite works without it; in a terminal use `/superlite:tail`.
-
-Or load a local checkout for one session: `claude --plugin-dir <path-to-superlite>`
-
-Open a fresh session: the superlite intro appears once. Then send `Let's make a react todo list`; a working install starts `inventing` before any code is written. Installs for Codex, Cursor, Gemini CLI, OpenCode and the other harnesses are in [Installation](#installation) below.
+Clone [this fork](https://github.com/mahmoudimus/superlite) and use the [session setup](docs/workflow-selection.md). The launcher needs Git, Python 3.12 or newer, and Bash. For Claude Code from the project directory, run the checkout's `scripts/superlite-session claude` so Superpowers is disabled for that session.
 
 ---
 
@@ -120,7 +111,7 @@ superlite plans a build, splits it into tasks that can run side by side, hands e
 
 ### Not a rival to superpowers
 
-superlite is **not a competitor** to [superpowers](https://github.com/obra/superpowers). superpowers is a careful, collaborative workflow that keeps a human close to every step, and it is excellent at that. superlite starts from its ideas (the plugin layout, the session-start hook, the lifecycle skills, with credit) and tunes them for a different job: **autonomous development, at speed**. If you want to steer each step, use superpowers. If you want to hand over a spec and come back to working code, use superlite. A superlite run suspends superpowers until `superlite-cli finish`; after that, superpowers can be used again.
+superlite is **not a competitor** to [superpowers](https://github.com/obra/superpowers). superpowers is a careful, collaborative workflow that keeps a human close to every step, and it is excellent at that. superlite starts from its ideas (the plugin layout, the session-start hook, the lifecycle skills, with credit) and tunes them for a different job: **autonomous development, at speed**. If you want to steer each step, use superpowers. If you want to hand over a spec and come back to working code, use superlite. Choose one workflow when starting a session. See [workflow selection](docs/workflow-selection.md).
 
 ---
 
@@ -167,19 +158,7 @@ Each harness has a tool-mapping file in `skills/using-superlite/references/` (An
 
 ### Claude Code
 
-Load for one session from a local checkout:
-
-    claude --plugin-dir <path-to-superlite>
-
-Or add a local checkout as a marketplace:
-
-    /plugin marketplace add <path-to-superlite>
-    /plugin install superlite@superlite-dev
-
-Or install from GitHub:
-
-    /plugin marketplace add iha2/superlite
-    /plugin install superlite@superlite-dev
+Use the [Claude Code launcher](docs/workflow-selection.md#claude-code). The `--plugin-dir` flag alone is suitable for a session that already excludes Superpowers.
 
 ### Antigravity
 
@@ -191,36 +170,9 @@ agy plugin install https://github.com/iha2/superlite
 
 Antigravity runs the plugin's session-start hook, so superlite is active from the first message. Reinstall with the same command to update.
 
-### Codex App
+### Codex App and CLI
 
-> Unverified: superpowers ships on Codex through the official Codex marketplace, which superlite isn't listed in. This repo includes `.agents/plugins/marketplace.json` for a repo marketplace, but the command below hasn't been tested yet.
-
-- Add this repository as a plugin marketplace:
-
-  ```bash
-  codex plugin marketplace add iha2/superlite
-  ```
-
-- In the Codex app, click on Plugins in the sidebar, find `Superlite` in the Coding section, and click the `+` next to it.
-- Add `[features]` `multi_agent = true` to `~/.codex/config.toml` for subagent dispatch.
-
-### Codex CLI
-
-> Unverified: superpowers ships on Codex through the official Codex marketplace, which superlite isn't listed in. This repo includes `.agents/plugins/marketplace.json` for a repo marketplace, but the command below hasn't been tested yet.
-
-- Add this repository as a plugin marketplace:
-
-  ```bash
-  codex plugin marketplace add iha2/superlite
-  ```
-
-- Open the plugin search interface:
-
-  ```bash
-  /plugins
-  ```
-
-- Search for `superlite` and select `Install Plugin`.
+Use the [Codex marketplace and session setup](docs/workflow-selection.md#codex-cli-and-desktop) to install the fork and select it by CLI profile or Desktop workspace.
 
 ### Cursor
 
@@ -342,19 +294,7 @@ OpenCode uses its own plugin install; install superlite separately even if you a
 
 ### Pi
 
-Install superlite as a Pi package from this repository:
-
-```bash
-pi install git:github.com/iha2/superlite
-```
-
-For local development, run Pi with a checkout loaded as a temporary package:
-
-```bash
-pi -e /path/to/superlite
-```
-
-The Pi package loads the superlite skills and a small extension that injects the `using-superlite` bootstrap at session startup and again after compaction. Subagent and task-list tools remain optional Pi companion packages.
+Start a session with the [Pi launcher](docs/workflow-selection.md#pi). The package loads Superlite skills and supplies the bootstrap on each model request. Add a subagent extension explicitly for parallel execution.
 
 ### Qwen Code
 
@@ -461,10 +401,6 @@ Analysis scripts:
   - E13: brownfield (`bench/tasks/brownfield`), 3 reps with and without Graphify.
 
   Done when the superlite median is at most 0.5x superpowers' on the combined task (G1) at equal hidden-test score and robustness of at least 6/7, and the E12 and E13 effects are measured.
-
-## Note
-
-While a superlite run is in progress, superpowers is suspended (`superlite-cli orchestrator set` writes `.superlite/peers.json` and, on Claude Code, turns `superpowers@claude-plugins-official` off in `.claude/settings.local.json`). The lifecycle skills are named `inventing`, `drafting`, `swarm`, `testing`, `diagnosis`, `proof`, and `shipping`, so a short-name lookup does not open the superpowers file. Both plugins still inject a session bootstrap. `superlite-cli finish` removes the marker and restores the previous setting, so superpowers or anything like it can be used again.
 
 ## Star history
 

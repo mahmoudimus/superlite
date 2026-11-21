@@ -199,7 +199,7 @@ def main(argv=None):
                 fh.write(f"Ruling: {a.ruling}" + chr(10))
         print(summary_line(a.plan))
         warn_no_session(a.plan)
-        import exclusive  # peer plugins stay off until superlite-cli finish
+        import exclusive  # mark the intended workflow until finish
         print(exclusive.suspend(a.plan))
         return 0
     cur = read_state(a.plan)

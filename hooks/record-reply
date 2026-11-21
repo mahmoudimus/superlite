@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Record a host-delivered human prompt without Claude-specific side effects.
+here="${BASH_SOURCE[0]//\\/\/}"
+case "$here" in */*) here="${here%/*}" ;; *) here="." ;; esac
+reply_checkout_only=1
+. "$here/_preamble" 2>/dev/null || exit 0
+. "$here/_reply"
+jstr agent_id; [ -z "$REPLY" ] || exit 0
+case "$in_cwd" in /*|?:/*) ;; *) exit 0 ;; esac
+up_to_run "$in_cwd"
+sd="$UP/.superlite"
+record_reply

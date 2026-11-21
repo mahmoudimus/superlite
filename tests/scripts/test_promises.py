@@ -555,7 +555,7 @@ def settings(root: Path) -> dict:
     return json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
 
 
-def test_peers_are_suspended_for_the_run_and_released_by_the_last_finish(repo):
+def test_peer_markers_are_released_by_the_last_finish_without_editing_settings(repo):
     env = {"CLAUDE_CODE": "1"}
     ensure(repo, "one")
     two = repo.cli("session", "ensure", "--slug", "two", "--move", "yes")
@@ -565,12 +565,12 @@ def test_peers_are_suspended_for_the_run_and_released_by_the_last_finish(repo):
         (home / ".claude").mkdir(exist_ok=True)
         (home / ".claude" / "settings.local.json").write_text(json.dumps({"enabledPlugins": {PEER: True}}), encoding="utf-8")
         r = repo.cli("orchestrator", "set", "ai", env=env, cwd=home)
-        assert r.code == 0 and "peers: suspended" in r.out, r.out + r.err
-        assert settings(home)["enabledPlugins"][PEER] is False
+        assert r.code == 0 and "peers: Superlite workflow selected" in r.out, r.out + r.err
+        assert settings(home)["enabledPlugins"][PEER] is True
     out = repo.cli("finish", env=env, cwd=homes[0])  # the first run finishes while the second is open
     assert out.code == 0, out.err
-    assert "peers: suspended" in out.out and "other run" in out.out
-    assert settings(homes[0])["enabledPlugins"][PEER] is False and settings(homes[1])["enabledPlugins"][PEER] is False
+    assert "peers: Superlite workflow selected" in out.out and "other run" in out.out
+    assert settings(homes[0])["enabledPlugins"][PEER] is True and settings(homes[1])["enabledPlugins"][PEER] is True
     out = repo.cli("finish", env=env, cwd=homes[1])  # the last one releases all
     assert out.code == 0, out.err
     assert "peers: clear" in out.out

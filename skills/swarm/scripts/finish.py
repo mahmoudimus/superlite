@@ -324,7 +324,7 @@ def _finish_locked(a, root, sl_dir):  # O(R*w + I*w)
         sys.stdout.write(summary(a.ledger, a.log, a.lint_log or str(Path(a.ledger).with_name("lint-log.jsonl")),
                                  a.plan, None, rid, logical))
         sys.stdout.write(learned.getvalue())  # the sync's own line, after the summary it feeds
-        import exclusive  # the run is done: peer plugins may load again
+        import exclusive  # clear the run marker and restore legacy settings if present
         widget = card_line(a.plan, root, a.ledger)  # before cleanup, which removes checkpoint state the card counts
         clean_checkpoints(a.ledger)  # after the summary, which reads the checkpoint state
         try:  # fail open: no registry, no git, unreadable sessions.json -> no line. Mark first: release looks at open runs.
